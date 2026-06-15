@@ -1,0 +1,42 @@
+{
+    "datacenters": [
+        {
+            "nome": "d1",
+            "precoEnergia": 40,
+            "poderProcessamento": 300
+        },
+        {
+            "nome": "d2",
+            "precoEnergia": 60,
+            "poderProcessamento": 120
+        },
+        {
+            "nome": "d3",
+            "precoEnergia": 20,
+            "poderProcessamento": 50
+        },
+        {
+            "nome": "d4",
+            "precoEnergia": 10,
+            "poderProcessamento": 10
+        }
+    ],
+    "tasks":[
+        {
+            "nome": "t1",
+            "tamanho": 1000
+        },
+        {
+            "nome": "t2",
+            "tamanho": 2300
+        },
+        {
+            "nome": "t3",
+            "tamanho": 600
+        },
+        {
+            "nome": "t4",
+            "tamanho": 870
+        }
+    ]
+}

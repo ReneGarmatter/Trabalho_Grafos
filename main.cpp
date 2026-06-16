@@ -27,60 +27,104 @@ vector<vector<int>> custo;
 vector<int> potencialDatacenters;
 vector<int> potencialTasks;
 
-set<pair<int,bool>> verticesEmparelhados;
+
 
 vector<int> recTasks;
 vector<int> recDatacenters;
-set<pair<int,bool>> S;
-set<pair<int,bool>> NS;
+set<int> S;
+set<int> NS;
 
-vector<pair<int,bool>> construirCaminhoDeAumento(pair<int,bool> &verticeDeInicio,vector<int> &recTasks,vector<int> &recDatacenters,pair<int,bool> &verticeFinal){
-    vector<pair<int,bool>> caminhoDeAumento;
-    caminhoDeAumento.push_back(verticeFinal);
-    pair<int,bool> next;
+set<pair<int,int>> emparelhamentoMínimo;
+set<pair<int,bool>> verticesEmparelhados;
+
+void construirCaminhoDeAumento(pair<int,bool> &verticeDeInicio,vector<int> &recTasks,vector<int> &recDatacenters,pair<int,bool> &verticeFinal){
+    
+    pair<int,bool> verticeAtual=verticeFinal;
+    pair<int,bool> verticeSeguinte;
+    int level=0;
+    cout<<"Caminho de aumento encontrado"<<endl;
     if(verticeFinal.second){
-        next={recDatacenters[verticeFinal.first],false};
+        verticeSeguinte={recDatacenters[verticeFinal.first],false};
     }
     else{
-        next={recTasks[verticeFinal.first],true};
+        verticeSeguinte={recTasks[verticeFinal.first],true};
     }
-    while (next!=verticeDeInicio){
-        if(verticeFinal.second){
-            next={recDatacenters[verticeFinal.first],false};
+    while (verticeSeguinte!=verticeDeInicio){
+
+        verticesEmparelhados.insert(verticeAtual);
+        verticesEmparelhados.insert(verticeSeguinte);
+
+        if(verticeAtual.second){
+            cout<<"Datacenter("<<verticeAtual.first<<") ";
         }
         else{
-            next={recTasks[verticeFinal.first],true};
+            cout<<"Task("<<verticeAtual.first<<") ";
         }
-        caminhoDeAumento.push_back(next);
-    }
-    caminhoDeAumento.push_back(verticeDeInicio);
+
+        if(level%2==0){
+            if(verticeAtual.second){
+                emparelhamentoMínimo.insert({verticeAtual.first,verticeSeguinte.first});
+            }
+            else{
+                emparelhamentoMínimo.insert({verticeSeguinte.first,verticeAtual.first});
+            }
+        }
+        else{
+            if(verticeAtual.second){
+                emparelhamentoMínimo.erase({verticeAtual.first,verticeSeguinte.first});
+            }
+            else{
+                emparelhamentoMínimo.erase({verticeSeguinte.first,verticeAtual.first});
+            }
+        }
     
-    cout<<"Caminho de aumento encontrado"<<endl;
-    for(auto p:caminhoDeAumento){
-        if(p.second){
-            cout<<"DataCenter "<<p.first<<" ";
+        verticeAtual=verticeSeguinte;
+        if(verticeAtual.second){
+            verticeSeguinte={recDatacenters[verticeAtual.first],false};
         }
         else{
-            cout<<"Tarefa "<<p.first<<" ";
+            verticeSeguinte={recTasks[verticeAtual.first],true};
+        }
+        level++;
+    }
+
+    if(verticeAtual.second){
+        cout<<"Datacenter("<<verticeAtual.first<<")"<<" Task("<<verticeSeguinte.first<<")"<<endl;
+    }
+    else{
+        cout<<"Task("<<verticeAtual.first<<")"<<" DataCenter("<<verticeSeguinte.first<<")"<<endl;
+    }
+
+    verticesEmparelhados.insert(verticeAtual);
+    verticesEmparelhados.insert(verticeSeguinte);
+    if(level%2==0){
+        if(verticeAtual.second){
+            emparelhamentoMínimo.insert({verticeAtual.first,verticeSeguinte.first});
+        }
+        else{
+            emparelhamentoMínimo.insert({verticeSeguinte.first,verticeAtual.first});
         }
     }
-    return caminhoDeAumento;
+    else{
+        if(verticeAtual.second){
+            emparelhamentoMínimo.erase({verticeAtual.first,verticeSeguinte.first});
+        }
+        else{
+            emparelhamentoMínimo.erase({verticeSeguinte.first,verticeAtual.first});
+        }
+    }
+    
 }
 
-vector<pair<int,bool>> buscarCaminhoDeAumento(){
-    recTasks= vector(totalDatacenters,0);
-    recDatacenters= vector(totalDatacenters,0);
+bool buscarCaminhoDeAumento(){
+    recTasks= vector(totalDatacenters,-1);
+    recDatacenters= vector(totalDatacenters,-1);
     S.clear();
     NS.clear();
 
     pair<int,bool> verticeDeInicio={0,true};
-    while(verticesEmparelhados.count(verticeDeInicio)){
-        if(verticeDeInicio.second){
-            verticeDeInicio={verticeDeInicio.first,false};
-        }
-        else{
-            verticeDeInicio={verticeDeInicio.first+1,true};
-        }
+    while(verticesEmparelhados.count(verticeDeInicio)){    
+        verticeDeInicio={verticeDeInicio.first+1,true};
     }
 
     if(verticeDeInicio.second){
@@ -94,9 +138,8 @@ vector<pair<int,bool>> buscarCaminhoDeAumento(){
     set<pair<int,bool>> visitados;
     fila.push(verticeDeInicio);
     visitados.insert(verticeDeInicio);
-    S.insert(verticeDeInicio);
+    S.insert(verticeDeInicio.first);
     
-    int level=0;
     while(!fila.empty()){
         pair<int,bool> visitando=fila.front();
 
@@ -111,21 +154,14 @@ vector<pair<int,bool>> buscarCaminhoDeAumento(){
             for(int i=0;i<totalDatacenters;i++){
                 if(!visitados.count({i,false})){
                     if(custo[visitando.first][i]-potencialDatacenters[visitando.first]-potencialTasks[i] == 0){                
-                        if(level%2==0){
-                            visitados.insert({i,false});
-                            S.insert({i,false});
-                            fila.push({i,false});
-                            recTasks[i]=visitando.first;
-                            if(!verticesEmparelhados.count({i,false})){
-                                pair<int,bool> verticeFinal={i,false};
-                                return construirCaminhoDeAumento(verticeDeInicio,recTasks,recDatacenters,verticeFinal);
-                            }
-                        }
-                        else if(verticesEmparelhados.count({i,false})){
-                            visitados.insert({i,false});
-                            NS.insert({i,false});
-                            fila.push({i,false});
-                            recTasks[i]=visitando.first;
+                        visitados.insert({i,false});
+                        NS.insert(i);
+                        fila.push({i,false});
+                        recTasks[i]=visitando.first;
+                        if(!verticesEmparelhados.count({i,false})){
+                            pair<int,bool> verticeFinal={i,false};
+                            construirCaminhoDeAumento(verticeDeInicio,recTasks,recDatacenters,verticeFinal);
+                            return true;
                         }
                     }
                 }
@@ -133,76 +169,41 @@ vector<pair<int,bool>> buscarCaminhoDeAumento(){
         }
         else{
             for(int i=0;i<totalDatacenters;i++){
-                if(!visitados.count({i,true})){
-                    if(custo[i][visitando.first]-potencialDatacenters[i]-potencialTasks[visitando.first] == 0){                
-                        if(level%2==0){
-                            visitados.insert({i,true});
-                            S.insert({i,true});
-                            fila.push({i,true});
-                            recDatacenters[i]=visitando.first;
-                            if(!verticesEmparelhados.count({i,true})){
-                                pair<int,bool> verticeFinal={i,true};
-                                return construirCaminhoDeAumento(verticeDeInicio,recTasks,recDatacenters,verticeFinal);
-                            }
-                        }
-                        else if(verticesEmparelhados.count({i,true})){
-                            visitados.insert({i,true});
-                            NS.insert({i,true});
-                            fila.push({i,true});
-                            recDatacenters[i]=visitando.first;
-                        }
+                if(emparelhamentoMínimo.count({i,visitando.first}) && !visitados.count({i,true})){                
+                    if(verticesEmparelhados.count({i,true})){
+                        visitados.insert({i,true});
+                        S.insert(i);
+                        fila.push({i,true});
+                        recDatacenters[i]=visitando.first;
                     }
                 }
             }
         }
-        
         fila.pop();
-        level++;
     }
     cout<<"Nenhum caminho de aumento encontrado"<<endl;
-    return vector<pair<int,bool>>(0);
+    return false;
 
 }
 
 void AtualizarPreços(){
     int delta=INT_MAX;
     for(auto p: S){
-        if(p.second){
-            for(int i=0;i<totalDatacenters;i++){
-                if(!NS.count({i,false}) && custo[p.first][i]-potencialTasks[i]-potencialDatacenters[p.first]<delta){
-                    delta=custo[p.first][i]-potencialTasks[i]-potencialDatacenters[p.first];
-                }
-            }
-        }
-        else{
-            for(int i=0;i<totalDatacenters;i++){
-                if(!NS.count({i,true}) && custo[i][p.first]-potencialTasks[p.first]-potencialDatacenters[i]<delta){
-                    delta=custo[i][p.first]-potencialTasks[p.first]-potencialDatacenters[i];
-                }
+        for(int i=0;i<totalDatacenters;i++){
+            if(!NS.count(i) && custo[p][i]-potencialTasks[i]-potencialDatacenters[p]<delta){
+                delta=custo[p][i]-potencialTasks[i]-potencialDatacenters[p];
             }
         }
     }
 
-    for(auto p: S){
-        if(p.second){
-            potencialDatacenters[p.first]+=delta;
-            cout<<"Preço do DataCenter "<<p.first<<" atualizado para "<<potencialDatacenters[p.first]<<endl;
-        }
-        else{
-            potencialTasks[p.first]+=delta;
-            cout<<"Preço da tarefa "<<p.first<<" atualizado para "<<potencialTasks[p.first]<<endl;
-        }
+    for(auto p: S){      
+        potencialDatacenters[p]+=delta;
+        cout<<"Preço do DataCenter "<<p<<" atualizado para "<<potencialDatacenters[p]<<endl;    
     }
 
     for(auto p: NS){
-        if(p.second){
-            potencialDatacenters[p.first]-=delta;
-            cout<<"Preço do DataCenter "<<p.first<<" atualizado para "<<potencialDatacenters[p.first]<<endl;
-        }
-        else{
-            potencialTasks[p.first]-=delta;
-            cout<<"Preço da tarefa "<<p.first<<" atualizado para "<<potencialTasks[p.first]<<endl;
-        }
+        potencialTasks[p]-=delta;
+        cout<<"Preço da Tarefa "<<p<<" atualizado para "<<potencialTasks[p]<<endl;
     }
 }
 
@@ -265,12 +266,20 @@ int main(int argc, char** argv){
         potencialDatacenters= vector(totalDatacenters,0);
         potencialTasks=vector(totalTasks,0);
 
-        set<pair<int,int>> emparelhamentoMínimo;
-        vector<pair<int,bool>> caminhoDeAumento=buscarCaminhoDeAumento();
-        if(caminhoDeAumento.size()==0){
-            AtualizarPreços();
+        
+        while(verticesEmparelhados.size()!=2*totalDatacenters){
+            if(!buscarCaminhoDeAumento()){
+                AtualizarPreços();
+            }
+
         }
-        buscarCaminhoDeAumento();
+        
+       
+        
+        cout<<"O melhor emparelhamento é:"<<endl;
+        for(auto p: emparelhamentoMínimo){
+            cout<<"Datacenter("<<p.first<<") - "<<" Task("<<p.second<<")"<<endl;
+        }
     }
     
     return 0;

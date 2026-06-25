@@ -9,13 +9,13 @@ using namespace std;
 struct datacenter
 {
     string nome;
-    int precoEnergia;
-    int poderProcessamento;
+    long precoEnergia;
+    long poderProcessamento;
 };
 struct task
 {
     string nome;
-    int tamanho;
+    long tamanho;
 };
 
 long totalDatacenters;
@@ -203,7 +203,7 @@ int main(int argc, char **argv)
 
     // criação do vetor de datacenters
     vector<datacenter> vetorDatacenters = vector<datacenter>(totalDatacenters);
-    for (int i = 0; i < totalDatacenters; i++)
+    for (long i = 0; i < totalDatacenters; i++)
     {
         json datacenterJson = dados["datacenters"][i];
         datacenter d;
@@ -215,7 +215,7 @@ int main(int argc, char **argv)
 
     // criação da fila de tasks
     queue<task> filaTasks;
-    for (int i = 0; i < totalTasks; i++)
+    for (long i = 0; i < totalTasks; i++)
     {
         json taskJson = dados["tasks"][i];
         task t;
@@ -229,11 +229,11 @@ int main(int argc, char **argv)
     // loop principal
     while (!filaTasks.empty())
     {
-        int tarefasNoLote = min(totalDatacenters, (long)filaTasks.size());
+        long tarefasNoLote = min(totalDatacenters, (long)filaTasks.size());
         
         // pega tasks da fila de acordo com o total de datacenters
         vector<task> vetorTasks;
-        for (int i = 0; i < tarefasNoLote; i++)
+        for (long i = 0; i < tarefasNoLote; i++)
         {
             vetorTasks.push_back(filaTasks.front());
             filaTasks.pop();
@@ -250,13 +250,13 @@ int main(int argc, char **argv)
 
         // calcula peso de cada aresta
         vector<vector<long>> custo = vector<vector<long>>(totalDatacenters, vector<long>(totalDatacenters));
-        for (int i = 0; i < totalDatacenters; i++)
+        for (long i = 0; i < totalDatacenters; i++)
         {
             // obs: total datacenters = total tasks
             // linha = datacenter, coluna = tarefa
             datacenter d = vetorDatacenters[i];
 
-            for (int j = 0; j < totalDatacenters; j++)
+            for (long j = 0; j < totalDatacenters; j++)
             {
                 task t = vetorTasks[j];
                 if(t.nome == "tFiller") {
@@ -276,8 +276,8 @@ int main(int argc, char **argv)
 
         // Exibe o emparelhamento (apenas tarefas reais)
         cout << "\n=== Emparelhamento do lote ===" << endl;
-        for (int i = 0; i < totalDatacenters; i++) {
-            int j = pareamentoDatacenterTask[i];
+        for (long i = 0; i < totalDatacenters; i++) {
+            long j = pareamentoDatacenterTask[i];
             if (j != -1 && vetorTasks[j].nome != "tFiller") {
                 cout << "Datacenter " << vetorDatacenters[i].nome 
                      << " -> Task " << vetorTasks[j].nome << endl;

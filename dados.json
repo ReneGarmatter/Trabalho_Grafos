@@ -36,7 +36,20 @@
         },
         {
             "nome": "t4",
-            "tamanho": 870
+            "tamanho": 1000
+        },
+        {
+            "nome": "t5",
+            "tamanho": 250
+        },
+        {
+            "nome": "t6",
+            "tamanho": 300
+        },
+        {
+            "nome": "t7",
+            "tamanho": 1600
         }
+        
     ]
 }

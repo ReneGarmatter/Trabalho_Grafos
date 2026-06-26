@@ -21,34 +21,35 @@ int main(){
     int quantidadeTarefas;
     cin >> quantidadeTarefas;
 
-    // preenche com datacenters aleatorios de um conjunto predefinido
+    // preenche com datacenters aleatorios 
     for(int i=0; i<quantidadeDatacenters; i++){
         string nome = "d" + to_string(i);
         dados["datacenters"][i]["nome"] = nome;
 
         random_device rd;
         mt19937 gen(rd()); 
+        // limites da distribuição de valores
         uniform_int_distribution<long> distPoder(10, 200);
         uniform_int_distribution<long> distEnergia(10, 100);
 
         dados["datacenters"][i]["precoEnergia"] = distEnergia(gen);
         dados["datacenters"][i]["poderProcessamento"] = distPoder(gen);
     }
-    // preenche com tarefas aleatorias de um conjunto predefinido
+    // preenche com tarefas aleatorias 
     for(int i=0; i<quantidadeTarefas; i++){
         string nome = "t" + to_string(i);
         dados["tasks"][i]["nome"] = nome;
 
         random_device rd;
         mt19937 gen(rd()); 
+        // limites da distribuição de valores
         uniform_int_distribution<long> distTamanho(100, 3000);
 
         dados["tasks"][i]["tamanho"] = distTamanho(gen);
     }
-    // cria arquivo de dados de teste
-
     
-    ofstream arquivoSaida("dadosTesteEstresse.json");
+    // cria arquivo de dados de teste
+    ofstream arquivoSaida("dados.json");
     arquivoSaida << dados.dump(4);
     arquivoSaida.close();
     

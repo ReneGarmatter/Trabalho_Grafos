@@ -1,217 +1,213 @@
 #include <bits/stdc++.h>
 #include <fstream>
+#include <chrono>
 
 #include "json.hpp"
 using json = nlohmann::json;
 
 using namespace std;
+using namespace std::chrono;
 
-struct datacenter{
+struct datacenter
+{
     string nome;
-    int precoEnergia;
-    int poderProcessamento;
+    long precoEnergia;
+    long poderProcessamento;
 };
-struct task{
+struct task
+{
     string nome;
-    int tamanho;
+    long tamanho;
 };
 
-int totalDatacenters;
-int totalTasks;
+long totalDatacenters;
+long totalTasks;
 
-vector<datacenter> vetorDatacenters;
-vector<task> vetorTasks;
+void algoritmoHungaro(vector<vector<long>> custo, long totalDatacenters,
+                      vector<long> &pareamentoDatacenterTask, vector<long> &pareamentoTaskDatacenter)
+{
 
-vector<vector<int>> custo;
+    vector<long> potencialDatacenter = vector<long>(totalDatacenters, 0);
+    vector<long> potencialTask = vector<long>(totalDatacenters, 0);
 
-vector<int> potencialDatacenters;
-vector<int> potencialTasks;
-
-
-
-vector<int> recTasks;
-vector<int> recDatacenters;
-set<int> S;
-set<int> NS;
-
-set<pair<int,int>> emparelhamentoMínimo;
-set<pair<int,bool>> verticesEmparelhados;
-
-void construirCaminhoDeAumento(pair<int,bool> &verticeDeInicio,vector<int> &recTasks,vector<int> &recDatacenters,pair<int,bool> &verticeFinal){
-    
-    pair<int,bool> verticeAtual=verticeFinal;
-    pair<int,bool> verticeSeguinte;
-    int level=0;
-    cout<<"Caminho de aumento encontrado"<<endl;
-    if(verticeFinal.second){
-        verticeSeguinte={recDatacenters[verticeFinal.first],false};
-    }
-    else{
-        verticeSeguinte={recTasks[verticeFinal.first],true};
-    }
-    while (verticeSeguinte!=verticeDeInicio){
-
-        verticesEmparelhados.insert(verticeAtual);
-        verticesEmparelhados.insert(verticeSeguinte);
-
-        if(verticeAtual.second){
-            cout<<"Datacenter("<<verticeAtual.first<<") ";
-        }
-        else{
-            cout<<"Task("<<verticeAtual.first<<") ";
-        }
-
-        if(level%2==0){
-            if(verticeAtual.second){
-                emparelhamentoMínimo.insert({verticeAtual.first,verticeSeguinte.first});
-            }
-            else{
-                emparelhamentoMínimo.insert({verticeSeguinte.first,verticeAtual.first});
+    // Inicializa potenciais das tarefas com o mínimo de cada coluna
+    for (long j = 0; j < totalDatacenters; j++) {
+        potencialTask[j] = custo[0][j];
+        for (long i = 1; i < totalDatacenters; i++) {
+            if (custo[i][j] < potencialTask[j]) {
+                potencialTask[j] = custo[i][j];
             }
         }
-        else{
-            if(verticeAtual.second){
-                emparelhamentoMínimo.erase({verticeAtual.first,verticeSeguinte.first});
-            }
-            else{
-                emparelhamentoMínimo.erase({verticeSeguinte.first,verticeAtual.first});
-            }
-        }
+    }
+
+    /**
+     * Algoritmo hungaro começa aqui .
+     * Sempre que o algorimo encontra um pareamento , 
+     * a cardinalidade de M aumenta em 1, por isso so precisamos desse for
+     * como condição de parada (pareamos de datacenter em datacenter)
+     */
+    for (long i = 0; i < totalDatacenters; ++i) {
+
+        vector<bool> visitadoDatacenter(totalDatacenters, false);
+        vector<bool> visitadoTarefa(totalDatacenters, false);
+
+        vector<long> predecessorTarefa(totalDatacenters, -1);  // tarefa -> datacenter
+        vector<long> predecessorDatacenter(totalDatacenters, -1);  // datacenter -> tarefa
     
-        verticeAtual=verticeSeguinte;
-        if(verticeAtual.second){
-            verticeSeguinte={recDatacenters[verticeAtual.first],false};
+        if(pareamentoDatacenterTask[i] != -1){ // checamos se o datacenter i já esta pareado
+            continue; // continua para o proximo caso verdadeiro
         }
-        else{
-            verticeSeguinte={recTasks[verticeAtual.first],true};
-        }
-        level++;
-    }
+        vector<long> nivelAtual; 
+        nivelAtual.push_back(i); // i é o datacenter de inicio da BFS
 
-    if(verticeAtual.second){
-        cout<<"Datacenter("<<verticeAtual.first<<")"<<" Task("<<verticeSeguinte.first<<")"<<endl;
-    }
-    else{
-        cout<<"Task("<<verticeAtual.first<<")"<<" DataCenter("<<verticeSeguinte.first<<")"<<endl;
-    }
+        visitadoDatacenter[i] = true; // visitamos o datacenter
+        long nivel = 0; // nivel atual da arvore
+        bool caminhoEncontrado = false;
+        long tarefaLivre = -1; // guarda a tarefa livre encontrada
 
-    verticesEmparelhados.insert(verticeAtual);
-    verticesEmparelhados.insert(verticeSeguinte);
-    if(level%2==0){
-        if(verticeAtual.second){
-            emparelhamentoMínimo.insert({verticeAtual.first,verticeSeguinte.first});
-        }
-        else{
-            emparelhamentoMínimo.insert({verticeSeguinte.first,verticeAtual.first});
-        }
-    }
-    else{
-        if(verticeAtual.second){
-            emparelhamentoMínimo.erase({verticeAtual.first,verticeSeguinte.first});
-        }
-        else{
-            emparelhamentoMínimo.erase({verticeSeguinte.first,verticeAtual.first});
-        }
-    }
+        while(!caminhoEncontrado){
+            // inicio BFS
+            while(!nivelAtual.empty() && !caminhoEncontrado){ // condição de parada da BFS
+                vector<long> proximoNivel;
     
-}
-
-bool buscarCaminhoDeAumento(){
-    recTasks= vector(totalDatacenters,-1);
-    recDatacenters= vector(totalDatacenters,-1);
-    S.clear();
-    NS.clear();
-
-    pair<int,bool> verticeDeInicio={0,true};
-    while(verticesEmparelhados.count(verticeDeInicio)){    
-        verticeDeInicio={verticeDeInicio.first+1,true};
-    }
-
-    if(verticeDeInicio.second){
-        cout<<"começando do Datacenter "<< verticeDeInicio.first<<endl;
-    }
-    else{
-        cout<<"começando da tarefa "<<verticeDeInicio.first<<endl;
-    }
-
-    queue<pair<int,bool>> fila;
-    set<pair<int,bool>> visitados;
-    fila.push(verticeDeInicio);
-    visitados.insert(verticeDeInicio);
-    S.insert(verticeDeInicio.first);
+                if(nivel % 2 == 0){ // se nivel atual é par então o nivel atual contem datacenters e o proximo contem tarefas
     
-    while(!fila.empty()){
-        pair<int,bool> visitando=fila.front();
+                    for(long datacenter : nivelAtual){ // para cada datacenter do nivel atual
 
-        if(visitando.second){
-            cout<<"Olhando Datacenter "<< visitando.first<<endl;
-        }
-        else{
-            cout<<"Olhando tarefa "<<visitando.first<<endl;
-        }
-        
-        if(visitando.second){
-            for(int i=0;i<totalDatacenters;i++){
-                if(!visitados.count({i,false})){
-                    if(custo[visitando.first][i]-potencialDatacenters[visitando.first]-potencialTasks[i] == 0){                
-                        visitados.insert({i,false});
-                        NS.insert(i);
-                        fila.push({i,false});
-                        recTasks[i]=visitando.first;
-                        if(!verticesEmparelhados.count({i,false})){
-                            pair<int,bool> verticeFinal={i,false};
-                            construirCaminhoDeAumento(verticeDeInicio,recTasks,recDatacenters,verticeFinal);
-                            return true;
+                        for(long tarefa=0; tarefa<totalDatacenters; tarefa++){ // visitamos cada tarefa visinha do datacenter
+                            
+                            // se a aresta de datacenter com tarefa é apertada
+                            if(custo[datacenter][tarefa] - potencialTask[tarefa] - potencialDatacenter[datacenter] == 0
+                            && !visitadoTarefa[tarefa]){ // e tarefa não foi visitada
+    
+                                visitadoTarefa[tarefa] = true; // visitamos tarefa
+                                predecessorTarefa[tarefa] = datacenter; // registramos predecessor
+                                
+                                if(pareamentoTaskDatacenter[tarefa] == -1){ // se tarefa não esta emparelhada achamos caminho de aumento
+                                    caminhoEncontrado = true;
+                                    tarefaLivre = tarefa;
+                                    break;
+                                }
+                                else{ // se não continua BFS
+                                    // adicionamos no proximo nivel
+                                    proximoNivel.push_back(tarefa);
+                                }
+                            }
+                        }
+                        if(caminhoEncontrado) break;
+                    }
+                }
+                else if(nivel % 2 == 1){// se nivel atual é impar então o nivel atual contem tarefas e o proximo contem datacenters
+                    
+                    for(long tarefa : nivelAtual){ // faça para cada tarefa do nivel atual
+                        
+                        if(pareamentoTaskDatacenter[tarefa] != -1){ // se tarefa esta emparelhada
+                            long datacenter = pareamentoTaskDatacenter[tarefa];
+                            
+                            if(!visitadoDatacenter[datacenter]) {
+                                visitadoDatacenter[datacenter] = true; // visitamos datacenter
+                                predecessorDatacenter[datacenter] = tarefa; // registramos predecessor
+                                // continua a BFS
+                                // adicionamos no proximo nivel
+                                proximoNivel.push_back(datacenter);
+                            }
                         }
                     }
                 }
+    
+                nivelAtual = proximoNivel;
+                nivel++;
             }
-        }
-        else{
-            for(int i=0;i<totalDatacenters;i++){
-                if(emparelhamentoMínimo.count({i,visitando.first}) && !visitados.count({i,true})){                
-                    if(verticesEmparelhados.count({i,true})){
-                        visitados.insert({i,true});
-                        S.insert(i);
-                        fila.push({i,true});
-                        recDatacenters[i]=visitando.first;
+        
+            if(caminhoEncontrado){ // aumenta o caminho
+                long tarefaAtual = tarefaLivre;
+                
+                // percorre
+                while(tarefaAtual != -1) {
+                    long datacenterAtual = predecessorTarefa[tarefaAtual];
+                    
+                    if(datacenterAtual != -1) {
+                        long tarefaAnterior = predecessorDatacenter[datacenterAtual];
+                        
+                        // Inverte o emparelhamento
+                        pareamentoDatacenterTask[datacenterAtual] = tarefaAtual;
+                        pareamentoTaskDatacenter[tarefaAtual] = datacenterAtual;
+                        
+                        tarefaAtual = tarefaAnterior;
+                    } else {
+                        break;
                     }
                 }
             }
-        }
-        fila.pop();
-    }
-    cout<<"Nenhum caminho de aumento encontrado"<<endl;
-    return false;
-
-}
-
-void AtualizarPreços(){
-    int delta=INT_MAX;
-    for(auto p: S){
-        for(int i=0;i<totalDatacenters;i++){
-            if(!NS.count(i) && custo[p][i]-potencialTasks[i]-potencialDatacenters[p]<delta){
-                delta=custo[p][i]-potencialTasks[i]-potencialDatacenters[p];
+            else { // atualiza potenciais
+                // Calcula delta: menor custo reduzido entre S e (Tarefas - N(S))
+                // S = datacenters visitados (níveis pares)
+                // N(S) = tarefas visitadas (níveis ímpares)
+                long delta = LONG_MAX;
+                for(long d = 0; d < totalDatacenters; d++) {
+                    if(visitadoDatacenter[d]) {
+                        for(long t = 0; t < totalDatacenters; t++) {
+                            if(!visitadoTarefa[t]) {
+                                long custoReduzido = custo[d][t] - potencialDatacenter[d] - potencialTask[t];
+                                if(custoReduzido < delta) {
+                                    delta = custoReduzido;
+                                }
+                            }
+                        }
+                    }
+                }
+                
+                if(delta == LONG_MAX) break;  // não deveria acontecer em um problema válido
+                
+                // Atualiza potenciais
+                // Para datacenters em S (visitados): aumenta o potencial
+                for(long d = 0; d < totalDatacenters; d++) {
+                    if(visitadoDatacenter[d]) {
+                        potencialDatacenter[d] += delta;
+                    }
+                }
+                
+                // Para tarefas em N(S) (visitadas): diminui o potencial
+                for(long t = 0; t < totalDatacenters; t++) {
+                    if(visitadoTarefa[t]) {
+                        potencialTask[t] -= delta;
+                    }
+                }
+                
+                // Prepara para continuar a BFS
+                // Reinsere os datacenters visitados no nível atual
+                // (eles estão nos níveis pares e precisam ser re-explorados
+                //  pois novas arestas de custo zero podem ter surgido)
+                nivelAtual.clear();
+                for(long d = 0; d < totalDatacenters; d++) {
+                    if(visitadoDatacenter[d]) {
+                        nivelAtual.push_back(d);
+                    }
+                }
+                // Reinicia o nível para 0 para re-explorar a partir dos datacenters
+                nivel = 0;
             }
         }
     }
-
-    for(auto p: S){      
-        potencialDatacenters[p]+=delta;
-        cout<<"Preço do DataCenter "<<p<<" atualizado para "<<potencialDatacenters[p]<<endl;    
-    }
-
-    for(auto p: NS){
-        potencialTasks[p]-=delta;
-        cout<<"Preço da Tarefa "<<p<<" atualizado para "<<potencialTasks[p]<<endl;
-    }
 }
 
-int main(int argc, char** argv){
-    
-    // leitor json
+int main(int argc, char **argv)
+{
 
-    ifstream arquivoEntrada("dados.json");
+    // Verifica se o arquivo foi fornecido
+    if (argc < 2) {
+        cerr << "Uso: " << argv[0] << " <arquivo.json>" << endl;
+        return 1;
+    }
+    // leitor json
+    string nomeArquivo = argv[1];
+
+    ifstream arquivoEntrada(nomeArquivo);
+    if (!arquivoEntrada.is_open()) {
+        cerr << "Erro ao abrir o arquivo: " << nomeArquivo << endl;
+        return 1;
+    }
+
     json dados;
     arquivoEntrada >> dados;
 
@@ -219,8 +215,9 @@ int main(int argc, char** argv){
     totalTasks = dados["tasks"].size();
 
     // criação do vetor de datacenters
-    vetorDatacenters = vector<datacenter>(totalDatacenters);
-    for(int i=0; i<totalDatacenters; i++){
+    vector<datacenter> vetorDatacenters = vector<datacenter>(totalDatacenters);
+    for (long i = 0; i < totalDatacenters; i++)
+    {
         json datacenterJson = dados["datacenters"][i];
         datacenter d;
         d.nome = datacenterJson["nome"];
@@ -231,56 +228,94 @@ int main(int argc, char** argv){
 
     // criação da fila de tasks
     queue<task> filaTasks;
-    for(int i=0; i<totalTasks; i++){
+    for (long i = 0; i < totalTasks; i++)
+    {
         json taskJson = dados["tasks"][i];
         task t;
         t.nome = taskJson["nome"];
         t.tamanho = taskJson["tamanho"];
         filaTasks.push(t);
     }
+
+    long numTarefasProcessadas = 0;
     
-    //loop principal
-    while(!filaTasks.empty()){
+    auto inicioTotal = high_resolution_clock::now();// registro do tempo de processamento total
+
+    // loop principal
+    while (!filaTasks.empty())
+    {
+        long tarefasNoLote = min(totalDatacenters, (long)filaTasks.size());
+        
         // pega tasks da fila de acordo com o total de datacenters
-        vetorTasks = vector<task>(totalDatacenters);
-        for(int i=0; i<totalDatacenters;  i++){
-            vetorTasks[i] = filaTasks.front();
+        vector<task> vetorTasks;
+        for (long i = 0; i < tarefasNoLote; i++)
+        {
+            vetorTasks.push_back(filaTasks.front());
             filaTasks.pop();
         }
 
-        //calcula peso de cada aresta
-        custo= vector<vector<int>> (totalDatacenters, vector<int>(totalTasks));
-        for(int i=0; i<totalDatacenters; i++){
+        // Completa com tarefas filler
+        while (vetorTasks.size() < totalDatacenters)
+        {
+            task tFiller;
+            tFiller.nome = "tFiller";
+            tFiller.tamanho = LONG_MAX / 1000; // evita overflow
+            vetorTasks.push_back(tFiller);
+        }
+
+        // calcula peso de cada aresta
+        vector<vector<long>> custo = vector<vector<long>>(totalDatacenters, vector<long>(totalDatacenters));
+        for (long i = 0; i < totalDatacenters; i++)
+        {
             // obs: total datacenters = total tasks
+            // linha = datacenter, coluna = tarefa
             datacenter d = vetorDatacenters[i];
 
-            for(int j=0; j<totalTasks; j++){
+            for (long j = 0; j < totalDatacenters; j++)
+            {
                 task t = vetorTasks[j];
-                custo[i][j] = (t.tamanho/d.poderProcessamento) * d.precoEnergia;
-                cout << custo[i][j] << " "; // debug
+                if(t.nome == "tFiller") {
+                    custo[i][j] = LONG_MAX / 1000;
+                } else {
+                    custo[i][j] = (t.tamanho / d.poderProcessamento) * d.precoEnergia;
+                }
+                //cout << custo[i][j] << " "; // debug
             }
-            cout << "\n";// debug
+            //cout << "\n"; // debug
         }
 
-        // algoritmo hungaro começa aqui
-        potencialDatacenters= vector(totalDatacenters,0);
-        potencialTasks=vector(totalTasks,0);
+        vector<long> pareamentoDatacenterTask(totalDatacenters, -1); // datacenter -> task
+        vector<long> pareamentoTaskDatacenter(totalDatacenters, -1); // task -> datacenter
 
-        
-        while(verticesEmparelhados.size()!=2*totalDatacenters){
-            if(!buscarCaminhoDeAumento()){
-                AtualizarPreços();
+        auto inicio = high_resolution_clock::now();// registro do tempo de processamento
+
+        algoritmoHungaro(custo, totalDatacenters, pareamentoDatacenterTask, pareamentoTaskDatacenter);
+
+        auto fim = high_resolution_clock::now();
+
+        // Exibe o emparelhamento (apenas tarefas reais)
+        cout << "\n=== Emparelhamento do lote ===" << endl;
+        for (long i = 0; i < totalDatacenters; i++) {
+            long j = pareamentoDatacenterTask[i];
+            if (j != -1 && vetorTasks[j].nome != "tFiller") {
+                cout << "Datacenter " << vetorDatacenters[i].nome 
+                     << " -> Task " << vetorTasks[j].nome << endl;
             }
+        }
 
-        }
+        auto duracao = duration_cast<microseconds>(fim - inicio);
+        auto duracaoMs = duration_cast<milliseconds>(fim - inicio);
         
-       
+        cout << "Tempo de execução do lote: " << duracao.count() << " μs" << " : " << duracaoMs.count() << "ms" << endl;
         
-        cout<<"O melhor emparelhamento é:"<<endl;
-        for(auto p: emparelhamentoMínimo){
-            cout<<"Datacenter("<<p.first<<") - "<<" Task("<<p.second<<")"<<endl;
-        }
+        numTarefasProcessadas += tarefasNoLote;
     }
-    
+
+    auto fimTotal = high_resolution_clock::now();
+    auto duracaoSgTotal = duration_cast<seconds>(fimTotal - inicioTotal);
+    auto duracaoMsTotal = duration_cast<milliseconds>(fimTotal - inicioTotal);
+
+    cout << "Tempo de execução total: " << duracaoSgTotal.count() << " s" 
+         << " : " << duracaoMsTotal.count() << "ms" << endl;
     return 0;
 }
